@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 
 void main() async {
 
-  QuerySnapshot snapshot =  await Firestore.instance.collection("usuarios").getDocuments();
-  snapshot.documents.forEach((document) => {
-    debugPrint(" ${document.documentID} :${document.data.toString()}")
+  Firestore.instance.collection("mensagens").snapshots().listen((snapshot) {
+    snapshot.documents.forEach((d) => {
+      debugPrint(d.data.toString())
+    });
   });
 
   runApp(MaterialApp(
