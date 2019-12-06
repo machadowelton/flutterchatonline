@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 void main() async {
 
-  DocumentSnapshot snapshot = await Firestore.instance.collection("usuarios").document("welton").get();
-  debugPrint(snapshot.data.toString());
+  QuerySnapshot snapshot =  await Firestore.instance.collection("usuarios").getDocuments();
+  snapshot.documents.forEach((document) => {
+    debugPrint(" ${document.documentID} :${document.data.toString()}")
+  });
 
   runApp(MaterialApp(
     home: MyApp(),
