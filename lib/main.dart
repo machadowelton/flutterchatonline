@@ -1,13 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  Firestore.instance
-      .collection("mensagens")
-      .document()
-      .collection("arqmidia")
-      .document()
-      .setData({"from": "Welton", "texto": "Olá"});
+void main() async {
+
+  DocumentSnapshot snapshot = await Firestore.instance.collection("usuarios").document("welton").get();
+  debugPrint(snapshot.data.toString());
 
   runApp(MaterialApp(
     home: MyApp(),
