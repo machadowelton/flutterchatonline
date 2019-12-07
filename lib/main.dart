@@ -45,6 +45,15 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         body: Column(
           children: <Widget>[
+            Expanded(
+              child: ListView(
+                children: <Widget>[
+                  ChatMesssage(),
+                  ChatMesssage(),
+                  ChatMesssage(),
+                ],
+              ),
+            ),
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -106,6 +115,41 @@ class _TextComposeState extends State<TextCompose> {
                         onPressed: _isComposed ? () {} : null))
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ChatMesssage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            margin: const EdgeInsets.only(right: 10.0),
+            child: CircleAvatar(
+              backgroundImage: NetworkImage(""),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "Welton",
+                  style: Theme.of(context).textTheme.subhead,
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 5.0),
+                  child: Text("Teste"),
+                )
+              ],
+            ),
+          )
+        ],
       ),
     );
   }
