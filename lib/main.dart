@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:async';
+
+import 'package:image_picker/image_picker.dart';
 
 void main() => runApp(MyApp());
 
@@ -30,22 +35,6 @@ Future<Null> _ensureLoggedIn() async {
               return value;
             });
         });
-  /* if (user == null)
-    user = await googleSigin.signInSilently().then((value) {
-      debugPrint("signInSilently: Chegou aqui, o valor de value é: $value");
-      return value;
-    }).catchError((e) {
-      debugPrint("signInSilently: Chegou aqui, o valor de erro é: $e");
-    });
-  if (user == null)
-    user = await googleSigin.signIn().then((value) {
-      debugPrint("signIn: Chegou aqui, o valor de value é: $value");
-      return value;
-    }).catchError((e) {
-      debugPrint("signIn: Chegou aqui, o valor de erro é: $e");
-    }); */
-  /*  if (user == null) user = await googleSigin.signInSilently();
-  if (user == null) user = await googleSigin.signIn(); */
   if (await auth.currentUser() == null) {
     GoogleSignInAuthentication credentials =
         await googleSigin.currentUser.authentication;
@@ -64,7 +53,8 @@ void _sendMessage({String text, String imgUrl}) {
     "text": text,
     "imgUrl": imgUrl,
     "senderName": googleSigin.currentUser.displayName,
-    "senderPhotoUrl": googleSigin.currentUser.photoUrl
+    "senderPhotoUrl": googleSigin.currentUser.photoUrl,
+    "datSendded": DateTime.now()
   });
 }
 
@@ -103,14 +93,29 @@ class _ChatScreenState extends State<ChatScreen> {
         body: Column(
           children: <Widget>[
             Expanded(
-              child: ListView(
-                children: <Widget>[
-                  ChatMesssage(),
-                  ChatMesssage(),
-                  ChatMesssage(),
-                ],
-              ),
-            ),
+                child: StreamBuilder(
+              stream: Firestore.instance.collection("messages").snapshots(),
+              builder: (context, snapshot) {
+                switch (snapshot.connectionState) {
+                  case ConnectionState.none:
+                  case ConnectionState.waiting:
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  default:
+                    return ListView.builder(
+                      reverse: true,
+                      itemCount: snapshot.data.documents.length,
+                      itemBuilder: (context, index) {
+                        List r = snapshot.data.documents.toList();
+                        r.sort((a, b) =>
+                            b["datSendded"].compareTo(a["datSendded"]));
+                        return ChatMesssage(r[index].data);
+                      },
+                    );
+                }
+              },
+            )),
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -155,7 +160,20 @@ class _TextComposeState extends State<TextCompose> {
             Container(
               child: IconButton(
                 icon: Icon(Icons.photo_camera),
-                onPressed: () {},
+                onPressed: () async {
+                  await _ensureLoggedIn();
+                  File imgFile =
+                      await ImagePicker.pickImage(source: ImageSource.camera);
+                  if (imgFile == null) return;
+                  StorageUploadTask task = FirebaseStorage.instance
+                      .ref()
+                      .child(googleSigin.currentUser.id.toString() +
+                          DateTime.now().millisecondsSinceEpoch.toString())
+                      .putFile(imgFile);
+                  StorageTaskSnapshot taskSnapshot = await task.onComplete;
+                  String url = await taskSnapshot.ref.getDownloadURL();
+                  _sendMessage(imgUrl: url);
+                },
               ),
             ),
             Expanded(
@@ -164,7 +182,7 @@ class _TextComposeState extends State<TextCompose> {
                     InputDecoration.collapsed(hintText: "Enviar uma mensagem"),
                 onChanged: (text) {
                   setState(() {
-                    _isComposed = text.length > 0;
+                    _isComposed = text.trim().length > 0; 
                   });
                 },
                 onSubmitted: (value) {
@@ -201,6 +219,10 @@ class _TextComposeState extends State<TextCompose> {
 }
 
 class ChatMesssage extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  ChatMesssage(this.data);
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -211,8 +233,7 @@ class ChatMesssage extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(right: 10.0),
             child: CircleAvatar(
-              backgroundImage: NetworkImage(
-                  "https://ichef.bbci.co.uk/news/320/cpsprodpb/14F6C/production/_105486858_4669077b-0103-4a09-a640-f065afb9340a.jpg"),
+              backgroundImage: NetworkImage(data["senderPhotoUrl"]),
             ),
           ),
           Expanded(
@@ -220,12 +241,17 @@ class ChatMesssage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  "Welton",
+                  data["senderName"],
                   style: Theme.of(context).textTheme.subhead,
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 5.0),
-                  child: Text("Teste"),
+                  child: data["imgUrl"] != null
+                      ? Image.network(
+                          data["imgUrl"],
+                          width: 250.0,
+                        )
+                      : Text(data["text"]),
                 )
               ],
             ),
