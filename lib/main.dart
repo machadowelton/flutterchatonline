@@ -133,6 +133,13 @@ class _TextComposeState extends State<TextCompose> {
   final _textController = TextEditingController();
   bool _isComposed = false;
 
+  void _reset() {
+    _textController.clear();
+    setState(() {
+      _isComposed = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return IconTheme(
@@ -162,6 +169,7 @@ class _TextComposeState extends State<TextCompose> {
                 },
                 onSubmitted: (value) {
                   _handleSubmitted(value);
+                  _reset();
                 },
                 controller: _textController,
               ),
@@ -174,6 +182,7 @@ class _TextComposeState extends State<TextCompose> {
                         onPressed: _isComposed
                             ? () {
                                 _handleSubmitted(_textController.text);
+                                _reset();
                               }
                             : null)
                     : IconButton(
@@ -181,6 +190,7 @@ class _TextComposeState extends State<TextCompose> {
                         onPressed: _isComposed
                             ? () {
                                 _handleSubmitted(_textController.text);
+                                _reset();
                               }
                             : null))
           ],
