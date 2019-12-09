@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:async';
 
 void main() => runApp(MyApp());
 
@@ -18,20 +20,52 @@ final auth = FirebaseAuth.instance;
 
 Future<Null> _ensureLoggedIn() async {
   GoogleSignInAccount user = googleSigin.currentUser;
-  /* if(user == null)
-    user = await googleSigin.signInSilently()
-    .then((value) {
-      if(value != null) return value;
-      else return googleSigin.signIn();
+  user = user != null
+      ? user
+      : await googleSigin.signInSilently().then((value) {
+          if (value != null)
+            return value;
+          else
+            return googleSigin.signIn().then((value) {
+              return value;
+            });
+        });
+  /* if (user == null)
+    user = await googleSigin.signInSilently().then((value) {
+      debugPrint("signInSilently: Chegou aqui, o valor de value é: $value");
+      return value;
+    }).catchError((e) {
+      debugPrint("signInSilently: Chegou aqui, o valor de erro é: $e");
+    });
+  if (user == null)
+    user = await googleSigin.signIn().then((value) {
+      debugPrint("signIn: Chegou aqui, o valor de value é: $value");
+      return value;
+    }).catchError((e) {
+      debugPrint("signIn: Chegou aqui, o valor de erro é: $e");
     }); */
-  if (user == null) user = await googleSigin.signInSilently();
-  if (user == null) user = await googleSigin.signIn();
+  /*  if (user == null) user = await googleSigin.signInSilently();
+  if (user == null) user = await googleSigin.signIn(); */
   if (await auth.currentUser() == null) {
     GoogleSignInAuthentication credentials =
         await googleSigin.currentUser.authentication;
     await auth.signInWithCredential(GoogleAuthProvider.getCredential(
         idToken: credentials.idToken, accessToken: credentials.accessToken));
   }
+}
+
+_handleSubmitted(text) async {
+  await _ensureLoggedIn();
+  _sendMessage(text: text);
+}
+
+void _sendMessage({String text, String imgUrl}) {
+  Firestore.instance.collection("messages").add({
+    "text": text,
+    "imgUrl": imgUrl,
+    "senderName": googleSigin.currentUser.displayName,
+    "senderPhotoUrl": googleSigin.currentUser.photoUrl
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -96,6 +130,7 @@ class TextCompose extends StatefulWidget {
 }
 
 class _TextComposeState extends State<TextCompose> {
+  final _textController = TextEditingController();
   bool _isComposed = false;
 
   @override
@@ -125,6 +160,10 @@ class _TextComposeState extends State<TextCompose> {
                     _isComposed = text.length > 0;
                   });
                 },
+                onSubmitted: (value) {
+                  _handleSubmitted(value);
+                },
+                controller: _textController,
               ),
             ),
             Container(
@@ -132,10 +171,18 @@ class _TextComposeState extends State<TextCompose> {
                 child: Theme.of(context).platform == TargetPlatform.iOS
                     ? CupertinoButton(
                         child: Text("Enviar"),
-                        onPressed: _isComposed ? () {} : null)
+                        onPressed: _isComposed
+                            ? () {
+                                _handleSubmitted(_textController.text);
+                              }
+                            : null)
                     : IconButton(
                         icon: Icon(Icons.send),
-                        onPressed: _isComposed ? () {} : null))
+                        onPressed: _isComposed
+                            ? () {
+                                _handleSubmitted(_textController.text);
+                              }
+                            : null))
           ],
         ),
       ),
@@ -154,7 +201,8 @@ class ChatMesssage extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(right: 10.0),
             child: CircleAvatar(
-              backgroundImage: NetworkImage(""),
+              backgroundImage: NetworkImage(
+                  "https://ichef.bbci.co.uk/news/320/cpsprodpb/14F6C/production/_105486858_4669077b-0103-4a09-a640-f065afb9340a.jpg"),
             ),
           ),
           Expanded(
